@@ -1,8 +1,8 @@
 # HydraBrain
 
-HydraBrain is a browser extension that connects [HydraDB](https://hydradb.com) to your browser's side panel. It lets you query your HydraDB knowledge graph, ingest content from web pages, and trigger connector syncs -- all from inside the browser while you work.
+HydraBrain is a browser extension that connects [HydraDB](https://hydradb.com) to your browser's side panel. It lets you query your HydraDB knowledge graph, ingest content from web pages, and trigger connector syncs, all from inside the browser while you work.
 
-**HydraDB Hackathon submission -- Multi-Connector Cross-Source Retrieval Challenge**
+**HydraDB Hackathon submission: Multi-Connector Cross-Source Retrieval Challenge**
 
 ---
 
@@ -14,7 +14,7 @@ When you open the side panel, you can:
 
 - Ask questions that span multiple connected sources ("Who filed this ticket and what did they say about it in Slack?")
 - See how HydraDB routes each hop of a multi-hop question, which collection it queries, and whether it used fast or thinking mode
-- Ingest the current page -- a GitHub issue, a Linear ticket, a Notion page -- into HydraDB with a single slash command
+- Ingest the current page (a GitHub issue, a Linear ticket, a Notion page) into HydraDB with a single slash command
 - Trigger connector syncs on demand
 - Track how many queries used fast vs thinking mode and what the total latency was
 
@@ -35,10 +35,10 @@ Browser (HydraBrain Extension)
     |
     +-- HydraDB client (client.js)
         |
-        +-- POST /query            -- fast and thinking mode queries
-        +-- POST /context/ingest   -- document ingestion
-        +-- POST /connectors/:id/sync -- trigger connector sync
-        +-- GET  /connectors        -- list connector status
+        +-- POST /query               fast and thinking mode queries
+        +-- POST /context/ingest      document ingestion
+        +-- POST /connectors/:id/sync trigger connector sync
+        +-- GET  /connectors          list connector status
         |
         HTTPS --> api.hydradb.com
                   Database: hydramind
@@ -104,65 +104,117 @@ Three tools are available to the AI agent:
 
 ---
 
-## Setup
+## Running the Demo
 
-### Step 1: Load the extension
+### Step 1: Clone and load the extension
 
 ```bash
 git clone https://github.com/Tasfia-17/hydrabrain.git
+cd hydrabrain
 ```
 
-In Chrome:
-1. Go to `chrome://extensions`
-2. Enable Developer mode
-3. Click Load unpacked
-4. Select `src/hydrabrain-extension`
+Open Chrome and go to `chrome://extensions`:
 
-### Step 2: Configure the API key
+1. Turn on **Developer mode** (top right toggle)
+2. Click **Load unpacked**
+3. Select the `src/hydrabrain-extension` folder inside the cloned repo
+4. The HydraBrain extension icon will appear in the toolbar
 
-In the extension side panel, go to Settings and enter your HydraDB API key from [app.hydradb.com](https://app.hydradb.com).
+### Step 2: Open the side panel
 
-Or set it programmatically:
+Click the HydraBrain icon in the Chrome toolbar. The side panel opens on the right side of the browser. If it does not open, right-click the icon and select "Open side panel".
+
+### Step 3: Configure the HydraDB API key
+
+In the side panel, click the **Settings** gear icon. Enter your HydraDB API key from [app.hydradb.com](https://app.hydradb.com) in the HydraDB API Key field and save.
+
+The key is stored in `chrome.storage.local` and only ever sent to `api.hydradb.com`.
+
+Alternatively, open the Chrome DevTools console on any tab and run:
+
 ```js
-chrome.storage.local.set({ hydradb_api_key: 'sk_live_...' });
+chrome.storage.local.set({ hydradb_api_key: 'sk_live_...' })
 ```
 
-The key is stored in `chrome.storage.local` and never sent anywhere except `api.hydradb.com`.
+### Step 4: Configure an LLM provider
 
-### Step 3: Ingest the demo dataset
+In Settings, add your LLM provider key (OpenRouter, Anthropic, OpenAI, etc.). This is needed for the agent to process queries. The extension supports 100+ providers.
+
+For OpenRouter, set:
+- Provider: OpenRouter
+- Model: `openrouter/qwen/qwen3-coder` or any capable model
+- API Key: your OpenRouter key
+
+### Step 5: Ingest the demo dataset
+
+In the side panel, type:
 
 ```
 /hydrabrain --ingest-demo
 ```
 
-This ingests 9 documents across 4 collections:
+This ingests 9 documents across 4 collections. Wait for it to complete (the side panel shows progress per document). This takes about 15-20 seconds.
 
 - 2 Linear tickets (BUG-123, FEAT-456)
 - 3 GitHub items (PR #45, Commit abc123, Issue #67)
 - 2 Slack threads (#eng, #payments)
 - 2 Notion docs (ADR-001, Team Wiki)
 
-### Step 4: Run the demo
+### Step 6: Run the full benchmark demo
 
 ```
 /hydrabrain --demo
 ```
 
-Runs all 5 benchmark questions with per-hop reasoning traces and latency measurements. See [BENCHMARK.md](BENCHMARK.md) for the full results.
+This runs all 5 competition questions in sequence. For each question, the side panel shows:
 
-### Step 5: Try individual queries
+- The question being asked
+- Each hop: which collection was queried, which mode (fast/thinking), latency, relevance score, and the matched content
+- Total latency and cost for the question
+
+### Step 7: Try individual queries
+
+Type any question directly:
 
 ```
 /hydrabrain Who filed BUG-123 and what did they say about the fix in Slack?
-/hydrabrain What was decided about the OAuth migration?
+```
+
+```
+/hydrabrain What was decided about the OAuth migration and has anyone contradicted it?
+```
+
+```
 /hydrabrain Which engineer has the most context on the auth service?
 ```
+
+```
+/hydrabrain Find the Stripe vs PayPal decision and any follow-up concerns
+```
+
+### Step 8: Check the metrics dashboard
+
+```
+/hydrabrain --metrics
+```
+
+Shows the session summary: total queries, fast vs thinking ratio, average latency, and estimated cost.
+
+### Step 9: Test page ingestion (optional)
+
+Navigate to any GitHub issue, Linear ticket, Slack channel, or Notion page. The content script detects the page type. In the side panel, type:
+
+```
+/hydrabrain --sync-page
+```
+
+This extracts structured data from the page using the accessibility tree and ingests it into the appropriate HydraDB collection.
 
 ---
 
 ## Demo Scenario
 
-The demo dataset represents an engineering team working on Phoenix Platform v2.0. The same people and projects appear across all 4 connected sources, which is what HydraDB is designed to handle.
+The demo dataset represents an engineering team working on Phoenix Platform v2.0. The same people and projects appear across all 4 connected sources, which is what makes cross-source retrieval meaningful.
 
 ### People (appear in all 4 sources)
 
@@ -177,10 +229,10 @@ The demo dataset represents an engineering team working on Phoenix Platform v2.0
 
 ```
 BUG-123 (Linear ticket)
-  -> PR #45 (GitHub) -- the fix
-  -> Commit abc123 (GitHub) -- the root cause
-  -> Slack #eng thread -- the discussion
-  -> ADR-001 (Notion) -- referenced as background
+  -> PR #45 (GitHub): the fix
+  -> Commit abc123 (GitHub): the root cause
+  -> Slack #eng thread: the discussion
+  -> ADR-001 (Notion): referenced as background
 
 Alice Chen
   -> Creator of BUG-123 (Linear)
@@ -195,7 +247,7 @@ Alice Chen
 
 ## Benchmark Questions
 
-Five questions that require multi-hop retrieval across sources. All results are from real API calls against `api.hydradb.com`. See [BENCHMARK.md](BENCHMARK.md) for the full breakdown with latency, scores, and per-hop analysis.
+Five questions requiring multi-hop retrieval across sources. All results from real API calls against `api.hydradb.com`. See [BENCHMARK.md](BENCHMARK.md) for the full breakdown with latency, scores, and per-hop analysis.
 
 | Question | Sources | Hops | Fast | Thinking |
 |---|---|---|---|---|
@@ -224,6 +276,7 @@ Required headers: `Authorization: Bearer <key>`, `API-Version: 2`
 | `/query` | POST | Query with `mode`, `collection`, `query_by` |
 
 Query body:
+
 ```json
 {
   "database": "hydramind",
