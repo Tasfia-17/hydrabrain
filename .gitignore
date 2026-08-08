@@ -1,0 +1,10 @@
+node_modules/
+.env
+*.env
+dist/
+.DS_Store
+*.zip
+*.log
+.arena/
+__pycache__/
+*.pyc
