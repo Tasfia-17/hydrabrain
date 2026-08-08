@@ -954,21 +954,21 @@ browser.storage.onChanged.addListener((changes) => {
 // toggle), which is fine because Firefox already has user-driven control.
 // ────────────────────────────────────────────────────────────────────────
 
-const webBrainGroupByWindow = new Map(); // windowId -> tabGroups groupId
-const WB_GROUPS_KEY = 'webBrainGroupByWindow';
+const hydraBrainGroupByWindow = new Map(); // windowId -> tabGroups groupId
+const HB_GROUPS_KEY = 'hydraBrainGroupByWindow';
 
 async function loadHydraBrainGroups() {
   if (!browser.tabGroups) return; // Firefox <142 — graceful skip
   try {
-    const stored = await browser.storage.session?.get(WB_GROUPS_KEY);
-    const arr = stored?.[WB_GROUPS_KEY];
+    const stored = await browser.storage.session?.get(HB_GROUPS_KEY);
+    const arr = stored?.[HB_GROUPS_KEY];
     if (Array.isArray(arr)) {
       for (const [windowId, groupId] of arr) {
         // Validate each cached group still exists; user may have
         // ungrouped or browser may have been closed between sessions.
         try {
           await browser.tabGroups.get(groupId);
-          webBrainGroupByWindow.set(windowId, groupId);
+          hydraBrainGroupByWindow.set(windowId, groupId);
         } catch { /* group gone, drop */ }
       }
     }
@@ -976,7 +976,7 @@ async function loadHydraBrainGroups() {
 }
 function saveHydraBrainGroups() {
   browser.storage.session?.set({
-    [WB_GROUPS_KEY]: Array.from(webBrainGroupByWindow.entries()),
+    [HB_GROUPS_KEY]: Array.from(hydraBrainGroupByWindow.entries()),
   }).catch(() => {});
 }
 loadHydraBrainGroups();
@@ -989,7 +989,7 @@ loadHydraBrainGroups();
 async function ensureHydraBrainGroup(tab) {
   if (!browser.tabGroups || !tab?.id || tab.windowId == null) return -1;
   try {
-    let groupId = webBrainGroupByWindow.get(tab.windowId);
+    let groupId = hydraBrainGroupByWindow.get(tab.windowId);
 
     // Validate cached group is still alive in the browser.
     if (groupId != null) {
@@ -997,7 +997,7 @@ async function ensureHydraBrainGroup(tab) {
         await browser.tabGroups.get(groupId);
       } catch {
         groupId = null;
-        webBrainGroupByWindow.delete(tab.windowId);
+        hydraBrainGroupByWindow.delete(tab.windowId);
         saveHydraBrainGroups();
       }
     }
@@ -1012,7 +1012,7 @@ async function ensureHydraBrainGroup(tab) {
           title: 'HydraBrain', color: 'blue', collapsed: false,
         });
       } catch { /* style update can fail on locked groups; skip */ }
-      webBrainGroupByWindow.set(tab.windowId, groupId);
+      hydraBrainGroupByWindow.set(tab.windowId, groupId);
       saveHydraBrainGroups();
     } else if (tab.groupId !== groupId) {
       // Group exists but source tab not in it. Add it.
@@ -1161,9 +1161,9 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 // Forget the per-window mapping when the user manually ungroups.
 browser.tabGroups?.onRemoved?.addListener?.((group) => {
-  for (const [windowId, gid] of webBrainGroupByWindow) {
+  for (const [windowId, gid] of hydraBrainGroupByWindow) {
     if (gid === group.id) {
-      webBrainGroupByWindow.delete(windowId);
+      hydraBrainGroupByWindow.delete(windowId);
       saveHydraBrainGroups();
       break;
     }
@@ -1172,8 +1172,8 @@ browser.tabGroups?.onRemoved?.addListener?.((group) => {
 
 // Window closed — drop the mapping.
 browser.windows?.onRemoved?.addListener?.((windowId) => {
-  if (webBrainGroupByWindow.has(windowId)) {
-    webBrainGroupByWindow.delete(windowId);
+  if (hydraBrainGroupByWindow.has(windowId)) {
+    hydraBrainGroupByWindow.delete(windowId);
     saveHydraBrainGroups();
   }
 });

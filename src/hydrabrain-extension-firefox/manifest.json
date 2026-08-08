@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "HydraBrain",
   "version": "26.2.2",
-  "description": "Open-source AI browser agent — chat with pages, automate tasks, multi-provider LLM support.",
+  "description": "HydraBrain: query your HydraDB knowledge graph from the browser. Cross-source retrieval across Slack, Linear, Notion, and GitHub with fast and thinking mode.",
   "permissions": [
     "activeTab",
     "menus",
